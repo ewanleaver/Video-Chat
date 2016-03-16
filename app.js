@@ -6,7 +6,7 @@ window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSess
 
 var localVideo;
 var remoteVideo;
-var localStream;
+var cameraStream;
 var peerConnection;
 // Using public STUN servers
 var config = {'iceServers': [{'url': 'stun:stun.services.mozilla.com'}, {'url': 'stun:stun.l.google.com:19302'}]};
@@ -30,7 +30,7 @@ function ready() {
     var promise = navigator.mediaDevices.getUserMedia(mediaConstraints);
 
     promise.then(function(stream) {
-      localStream = stream;
+      cameraStream = stream;
       localVideo.src = window.URL.createObjectURL(stream);
     });
 
@@ -48,7 +48,7 @@ function ready() {
 }
 
 function getUserMediaSuccess(stream) {
-  window.localStream = stream;
+  cameraStream = stream;
   localVideo.src = window.URL.createObjectURL(stream);
 }
 
@@ -57,6 +57,8 @@ function getUserMediaError(error) {
 }
 
 function call() {
+    console.log('Making the call');
+  
   // First create a RTCPeerConnection object (primary class used in WebRTC connection)
   // Once created, it will start gathering ICE candidates
   peerConnection = new RTCPeerConnection(config);
@@ -66,7 +68,7 @@ function call() {
   // Called whenever we get a stream from the other client
   //  (i.e. indicates connection success)
   peerConnection.onaddstream = gotRemoteStream;
-  peerConnection.addStream(window.localStream);
+  peerConnection.addStream(cameraStream);
 
   // Create an offer which tells the other client how to interact with us once the connection is established
   //  (These are also both callbacks, receives SDP)
@@ -74,6 +76,8 @@ function call() {
 }
 
 function answer() {
+  console.log('Answering the call');
+  
   // Almost the same as call()
   peerConnection = new RTCPeerConnection(config);
   peerConnection.onicecandidate = gotIceCandidate;
