@@ -6,6 +6,7 @@ window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSess
 
 var localVideo;
 var remoteVideo;
+var localStream;
 var peerConnection;
 // Using public STUN servers
 var config = {'iceServers': [{'url': 'stun:stun.services.mozilla.com'}, {'url': 'stun:stun.l.google.com:19302'}]};
@@ -23,7 +24,22 @@ function ready() {
     audio: true
   };
   
-  if(navigator.getUserMedia) {
+  if (navigator.mediaDevices.getUserMedia) {
+    // New standard, used by mozilla
+    console.log('New code');
+    var promise = navigator.mediaDevices.getUserMedia(mediaConstraints);
+
+    promise.then(function(stream) {
+      localStream = stream;
+      localVideo.src = window.URL.createObjectURL(stream);
+    });
+
+    promise.catch(function(error) {
+      console.log(error.name);
+    });
+  } else if(navigator.getUserMedia) {
+    // Chrome uses this
+    console.log('Old code');
     // getUserMediaSuccess and getUserMediaError are callbacks
     navigator.getUserMedia(mediaConstraints, getUserMediaSuccess, getUserMediaError);
   } else {
@@ -32,7 +48,7 @@ function ready() {
 }
 
 function getUserMediaSuccess(stream) {
-  localStream = stream;
+  window.localStream = stream;
   localVideo.src = window.URL.createObjectURL(stream);
 }
 
@@ -50,7 +66,7 @@ function call() {
   // Called whenever we get a stream from the other client
   //  (i.e. indicates connection success)
   peerConnection.onaddstream = gotRemoteStream;
-  peerConnection.addStream(localStream);
+  peerConnection.addStream(window.localStream);
 
   // Create an offer which tells the other client how to interact with us once the connection is established
   //  (These are also both callbacks, receives SDP)
