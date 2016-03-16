@@ -15,7 +15,8 @@ function ready() {
   localVideo = document.getElementById('localVideo');
   remoteVideo = document.getElementById('remoteVideo');
   
-  serverConnection = // To implement
+  serverConnection = new WebSocket('ws://127.0.0.1:8080');
+  serverConnection.onmessage = gotMessageFromServer;
 
   var mediaConstraints = {
     video: true,
@@ -98,7 +99,7 @@ function gotMessageFromServer(msg) {
     peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp), function() {
       peerConnection.createAnswer(gotDescription, createAnswerError);
     });
-  } else if (signal.ice) 
+  } else if (signal.ice) {
     // If it is an ICE candidate, simply need to add it to the RTCPeerConnection object
     // If we have an answer already but aren't connected, the browser will keep trying candidates
     peerConnection.addIceCandidate(new RTCIceCandidate(signal.ice));
