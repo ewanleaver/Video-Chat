@@ -32,6 +32,7 @@ function ready() {
     promise.then(function(stream) {
       cameraStream = stream;
       localVideo.src = window.URL.createObjectURL(stream);
+      localVideo.play();
     });
 
     promise.catch(function(error) {
@@ -50,6 +51,7 @@ function ready() {
 function getUserMediaSuccess(stream) {
   cameraStream = stream;
   localVideo.src = window.URL.createObjectURL(stream);
+  localVideo.play();
 }
 
 function getUserMediaError(error) {
@@ -82,7 +84,7 @@ function answer() {
   peerConnection = new RTCPeerConnection(config);
   peerConnection.onicecandidate = gotIceCandidate;
   peerConnection.onaddstream = gotRemoteStream;
-  peerConnection.addStream(localStream);
+  peerConnection.addStream(cameraStream);
 }
 
 function gotRemoteStream(event) {
@@ -114,12 +116,14 @@ function gotMessageFromServer(msg) {
   // Need to determine if the message is a description or an ICE candidate
   var signal = JSON.parse(msg.data);
   if (signal.sdp) {
+    console.log('Got SDP');
     // If it is a description, need to set it as the remote description on the RTCPeerConnection object
     // (and thereby create an answer)
     peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp), function() {
       peerConnection.createAnswer(gotDescription, createAnswerError);
     });
   } else if (signal.ice) {
+    console.log('Got ICE');
     // If it is an ICE candidate, simply need to add it to the RTCPeerConnection object
     // If we have an answer already but aren't connected, the browser will keep trying candidates
     peerConnection.addIceCandidate(new RTCIceCandidate(signal.ice));
