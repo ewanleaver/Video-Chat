@@ -28,13 +28,83 @@ function ready() {
   } else {
     alert('getUserMedia API unsupported');
   }
-  
-  function getUserMediaSuccess(stream) {
-    localStream = stream;
-    localVideo.src = window.URL.createObjectURL(stream);
+}
+
+function getUserMediaSuccess(stream) {
+  localStream = stream;
+  localVideo.src = window.URL.createObjectURL(stream);
+}
+
+function getUserMediaError(error) {
+  console.log(error);
+}
+
+function call() {
+  // First create a RTCPeerConnection object (primary class used in WebRTC connection)
+  // Once created, it will start gathering ICE candidates
+  peerConnection = new RTCPeerConnection(config);
+  // An ICE candidate is essentially a description of how to connect to a client 
+  //  (This calls a callbacks, as candidates can take a long time to arrive)
+  peerConnection.onicecandidate = gotIceCandidate;
+  // Called whenever we get a stream from the other client
+  //  (i.e. indicates connection success)
+  peerConnection.onaddstream = gotRemoteStream;
+  peerConnection.addStream(localStream);
+
+  // Create an offer which tells the other client how to interact with us once the connection is established
+  //  (These are also both callbacks, receives SDP)
+  peerConnection.createOffer(gotDescription, createOfferError);
+}
+
+function answer() {
+  // Almost the same as call()
+  peerConnection = new RTCPeerConnection(config);
+  peerConnection.onicecandidate = gotIceCandidate;
+  peerConnection.onaddstream = gotRemoteStream;
+  peerConnection.addStream(localStream);
+}
+
+function gotRemoteStream(event) {
+  console.log('got remote stream');
+  remoteVideo.src = window.URL.createObjectURL(event.stream);
+}
+
+function createOfferError(error) {
+  console.log(error);
+}
+
+function gotDescription(description) {
+  console.log('got description');
+  peerConnection.setLocalDescription(description, function () {
+    serverConnection.send(JSON.stringify({sdp: description}));
+  }, function() {console.log('set description error')});
+}
+
+function gotIceCandidate(event) {
+  if(event.candidate != null) {
+    serverConnection.send(JSON.stringify({ice: event.candidate}));
   }
+}
+
+function gotMessageFromServer(msg) {
+  // If we haven't got a perrConnection yet, we must be the receiving side
+  if(!peerConnection) answer();
   
-  function getUserMediaError(error) {
-    console.log(error);
+  // Need to determine if the message is a description or an ICE candidate
+  var signal = JSON.parse(msg.data);
+  if (signal.sdp) {
+    // If it is a description, need to set it as the remote description on the RTCPeerConnection object
+    // (and thereby create an answer)
+    peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp), function() {
+      peerConnection.createAnswer(gotDescription, createAnswerError);
+    });
+  } else if (signal.ice) 
+    // If it is an ICE candidate, simply need to add it to the RTCPeerConnection object
+    // If we have an answer already but aren't connected, the browser will keep trying candidates
+    peerConnection.addIceCandidate(new RTCIceCandidate(signal.ice));
   }
+}
+
+function createAnswerError(error) {
+  console.log(error);
 }
